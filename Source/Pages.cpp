@@ -348,6 +348,10 @@ SettingsPage::SettingsPage (AudioEngine& e) : engine (e)
         "  ・先読み（ルックアヘッド）するプラグインはその分遅れます（下の数字に表示）\n"_j
         "  ・このアプリはプロセスブロックの追加分割をしないので、遅延はドライバ＋プラグインだけです"_j);
     addAndMakeVisible (tips);
+
+    autoStart.setToggleState (engine.isAutoStartEnabled(), dontSendNotification);
+    autoStart.onClick = [this] { engine.setAutoStart (autoStart.getToggleState()); engine.saveSettings(); };
+    addAndMakeVisible (autoStart);
     startTimerHz (4);
     timerCallback();
 }
@@ -380,6 +384,8 @@ void SettingsPage::resized()
     latPanel.setBounds (r);
     selector->setBounds (left.reduced (20, 0).withTrimmedTop (80).withTrimmedBottom (20));
     auto lr = r.reduced (28, 0).withTrimmedTop (84).withTrimmedBottom (24);
+    autoStart.setBounds (lr.removeFromBottom (36));
+    lr.removeFromBottom (10);
     latency.setBounds (lr.removeFromTop (300));
     tips.setBounds (lr);
 }

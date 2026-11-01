@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(AotoVSTRouter VERSION 1.0.0)
+project(AotoVSTRouter VERSION 1.1.0)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,7 +19,11 @@ endif()
 juce_add_gui_app(AotoVSTRouter
     PRODUCT_NAME "Aoto VST Router"
     COMPANY_NAME "Aoto"
-    VERSION 1.0.0)
+    VERSION 1.1.0
+    ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/Resources/icon.png"
+    ICON_SMALL "${CMAKE_CURRENT_SOURCE_DIR}/Resources/icon.png")
+
+juce_add_binary_data(AotoAssets SOURCES Resources/icon.png)
 
 juce_generate_juce_header(AotoVSTRouter)
 
@@ -46,6 +50,7 @@ target_compile_definitions(AotoVSTRouter PRIVATE
     JUCE_DISPLAY_SPLASH_SCREEN=0)
 
 target_link_libraries(AotoVSTRouter PRIVATE
+    AotoAssets
     juce::juce_audio_utils
     juce::juce_audio_processors
     juce::juce_audio_devices

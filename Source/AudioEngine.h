@@ -47,7 +47,8 @@ struct ChannelStrip
 
 //==============================================================================
 class AudioEngine : private juce::AudioIODeviceCallback,
-                    private juce::ChangeListener
+                    private juce::ChangeListener,
+                    private juce::Timer
 {
 public:
     AudioEngine();
@@ -95,6 +96,10 @@ public:
     juce::String currentPresetName;
 
     void saveSettings();
+
+    // Windows 起動時に自動起動
+    bool isAutoStartEnabled();
+    void setAutoStart (bool);
     juce::File getDeadMansPedalFile() const;
 
     // レイテンシー情報（サンプル）
@@ -110,6 +115,8 @@ private:
     void audioDeviceAboutToStart (juce::AudioIODevice*) override;
     void audioDeviceStopped() override;
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
+    void timerCallback() override;   // 保存したデバイスが開けるまで再試行
+    std::unique_ptr<juce::XmlElement> pendingDeviceXml;
 
     std::unique_ptr<PluginSlot> createSlot (const juce::PluginDescription&, juce::String& error);
     void processChannel (ChannelStrip&, int numSamples) noexcept;

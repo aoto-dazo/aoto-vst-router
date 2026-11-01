@@ -1,4 +1,5 @@
 #include "MainComponent.h"
+#include <BinaryData.h>
 
 class MainWindow : public juce::DocumentWindow
 {
@@ -9,10 +10,14 @@ public:
         setUsingNativeTitleBar (false);
         setTitleBarHeight (0);                 // 自前のタイトルバー（ヘッダー）を使う
         setContentOwned (new MainComponent (engine), true);
+        const auto icon = juce::ImageCache::getFromMemory (BinaryData::icon_png, BinaryData::icon_pngSize);
+        setIcon (icon);
         setResizable (true, false);
         setResizeLimits (960, 540, 4000, 2400);
         centreWithSize (1400, 788);
         setVisible (true);
+        if (auto* peer = getPeer())
+            peer->setIcon (icon);
     }
 
     void closeButtonPressed() override { juce::JUCEApplication::getInstance()->systemRequestedQuit(); }

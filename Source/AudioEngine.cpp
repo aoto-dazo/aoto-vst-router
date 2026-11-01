@@ -115,10 +115,17 @@ void AudioEngine::initialise()
     monitorGainDb = (float) props->getDoubleValue ("monitorGainDb", -6.0);
 
     auto savedDevice = props->getXmlValue ("audioDevice");
-    deviceManager.initialise (64, 64, savedDevice.get(), true);
+    deviceManager.initialise (64, 64, savedDevice.get(), savedDevice == nullptr);
+
+    // PC 起動直後などで Babyface がまだ準備できていない時は、別のデバイスに切り替えず再試行する
+    if (savedDevice != nullptr && deviceManager.getCurrentAudioDevice() == nullptr)
+    {
+        pendingDeviceXml = std::move (savedDevice);
+        startTimer (2000);
+    }
 
     // 初回起動：ASIO があれば ASIO（Babyface 優先）＋小さいバッファを選ぶ
-    if (savedDevice == nullptr)
+    if (savedDevice == nullptr && pendingDeviceXml == nullptr)
     {
         for (auto* type : deviceManager.getAvailableDeviceTypes())
         {
@@ -156,12 +163,51 @@ void AudioEngine::initialise()
     }
     currentPresetName = props->getValue ("presetName", {});
 
+    setAutoStart (isAutoStartEnabled());
+
     deviceManager.addChangeListener (this);
     deviceManager.addAudioCallback (this);
 }
 
+void AudioEngine::timerCallback()
+{
+    if (pendingDeviceXml == nullptr) { stopTimer(); return; }
+    deviceManager.initialise (64, 64, pendingDeviceXml.get(), false);
+    if (deviceManager.getCurrentAudioDevice() != nullptr)
+    {
+        stopTimer();
+        pendingDeviceXml.reset();
+        openAllChannels();
+        notifyChanged();
+    }
+}
+
+static const char* runKey = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\AotoVSTRouter";
+
+bool AudioEngine::isAutoStartEnabled()
+{
+    return appProperties.getUserSettings()->getBoolValue ("autoStart", true);
+}
+
+void AudioEngine::setAutoStart (bool on)
+{
+    appProperties.getUserSettings()->setValue ("autoStart", on);
+   #if JUCE_WINDOWS
+    if (on)
+    {
+        const auto exe = File::getSpecialLocation (File::currentExecutableFile).getFullPathName();
+        WindowsRegistry::setValue (runKey, "\"" + exe + "\" --autostart");
+    }
+    else
+    {
+        WindowsRegistry::deleteValue (runKey);
+    }
+   #endif
+}
+
 void AudioEngine::shutdown()
 {
+    stopTimer();
     deviceManager.removeAudioCallback (this);
     deviceManager.removeChangeListener (this);
     deviceManager.closeAudioDevice();
@@ -502,8 +548,9 @@ bool AudioEngine::loadPreset (const File& file, StringArray& errors)
 void AudioEngine::saveSettings()
 {
     auto* props = appProperties.getUserSettings();
-    if (auto dev = deviceManager.createStateXml())
-        props->setValue ("audioDevice", dev.get());
+    if (deviceManager.getCurrentAudioDevice() != nullptr && pendingDeviceXml == nullptr)
+        if (auto dev = deviceManager.createStateXml())
+            props->setValue ("audioDevice", dev.get());
     if (auto kp = knownPlugins.createXml())
         props->setValue ("knownPlugins", kp.get());
 

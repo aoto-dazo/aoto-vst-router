@@ -95,4 +95,5 @@ private:
     TitledPanel latPanel { Icons::Id::signal, "レイテンシー"_j };
     std::unique_ptr<juce::AudioDeviceSelectorComponent> selector;
     juce::Label latency, tips;
+    juce::ToggleButton autoStart { "Windows 起動時に自動で起動する"_j };
 };
